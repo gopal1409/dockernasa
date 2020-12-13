@@ -1,0 +1,54 @@
+To start with that go to the root folder of your project (in my case ~/nasa-picture) and create a new text file called Dockerfile. It’ll contain all steps necessary to create an image (like steps in a food reciepe). For my application it looks like this:
+FROM java:8-jdk-alpine
+COPY ./build/libs/nasapicture-0.0.1-SNAPSHOT.war /usr/app/
+WORKDIR /usr/app
+EXPOSE 8080
+ENTRYPOINT ["java", "-jar", "nasapicture-0.0.1-SNAPSHOT.war"]
+Wow, what’s that even mean?! Some steps might be self-explanatory but let’s break all of them into smaller pieces.
+FROM java:8-jdk-alpine— with this line we tell Docker that our image will be based on another image that is available on public repository (Docker Hub). This image was prepared by someone else and contains all necessary dependencies that we would need to run any Java application.
+COPY ./build/libs/nasapicture-0.0.1-SNAPSHOT.war /usr/app/ — as you might already guess with this step we copy-paste something from one directory to another. But what and where? First argument after COPY is a path of an application that we want to put into container. I’m using .war file because my project is a web application, but you if yours is a standard .jar app go with that. The second parameter, /usr/app/ , is a directory in a container where we put the app.
+WORKDIR /usr/app — here we instruct Docker to use /usr/app folder as a root, otherwise in each following command we would need to provide the full path to the resource.
+EXPOSE 8080 — with it we inform Docker that a container will listen to specific port, the same as our app is using.
+ENTRYPOINT ["java", “-jar", “nasapicture-0.0.1-SNAPSHOT.war"] — in the last command we tell Docker to run the application, where first value is a command and the last two are parameters.
+Once we’ve got it we can go to the terminal, to a folder where Dockerfile is located and when you’re in there build an image with following command (the argument after -t flag is a name of an image, you can choose whatever you’d like; also notice that there is a dot . at the end of the command):
+$ docker build -t nasa-picture .
+Sending build context to Docker daemon  35.54MB
+Step 1/5 : FROM java:8-jdk-alpine
+ ---> 3fd9dd82815c
+Step 2/5 : COPY ./build/libs/nasapicture-0.0.1-SNAPSHOT.war /usr/app/
+ ---> 6c90658d9558
+Step 3/5 : WORKDIR /usr/app
+ ---> Running in 3d453fe48248
+Removing intermediate container 3d453fe48248
+ ---> 27f352fbbb15
+Step 4/5 : EXPOSE 8080
+ ---> Running in 0c656ae718e7
+Removing intermediate container 0c656ae718e7
+ ---> b3bd82c446b6
+Step 5/5 : ENTRYPOINT ["java", "-jar", "nasapicture-0.0.1-SNAPSHOT.war"]
+ ---> Running in b09c6788d305
+Removing intermediate container b09c6788d305
+ ---> 08ee9123cd58
+Successfully built 08ee9123cd58
+Successfully tagged nasa-picture:latest
+As you can see from above output, Docker is building the image by executing command step-by-step as they were defined in the Dockerfile.
+Now we can check whether it was really built with following command:
+$ docker images
+REPOSITORY    TAG          IMAGE ID        CREATED             SIZE
+nasa-picture  latest       08ee9123cd58    8 minutes ago       167MB
+java          8-jdk-alpine 3fd9dd82815c    2 years ago         145MB
+Great an image is available, so let’s run it:
+$ docker run -p 3333:8080 nasa-picture
+
+Yeah! Container has been created and it’s running, and to test it enter following URL in your browser — http://localhost:3333/
+Image for post
+Now if you want to stop the application just use Ctrl + C combination on your keyboard. To inspect if it really is not running type the following:
+$ docker container ls -a
+... IMAGE        COMMAND                STATUS           
+... nasa-picture "java -jar nasapictu…" Exited (130) 7 seconds ago                       
+Export Docker image to a file
+Until this point everything was done on a single PC, but usually we would like to share our work with others and this would require to generate a file that could be sent via email, copied to Dopbox, fttp or so on. Docker allows to save an image as .tar file and to do so just type following command:
+$ docker save --output nasa-picture-export.tar nasa-picture
+First argument, with --output flag, is a name of an exported file and the latter is an image name that we put to a file.
+As we now have an exported image you can share it and then to open it use following instruction:
+$ docker load --input nasa-picture-export.tar
